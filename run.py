@@ -1,13 +1,26 @@
 import numpy as np
-import click, joblib
+import click, wandb
+
+import torch
 
 from notears import utils, linear, nonlinear
 
+from notears.nonlinear import NotearsMLP
 
-LINEAR_SEMS = ["gauss", "exp", "gumbel", "uniform", "logistic", "poisson"]
-NONLINEAR_SEMS = ["mlp", "mim", "gp", "gp-add"]
-
-
+LINEAR_SEMS = [
+    "gauss",
+    "exp",
+    "gumbel",
+    "uniform",
+    "logistic",
+    "poisson",
+]
+NONLINEAR_SEMS = [
+    "mlp",
+    "mim",
+    "gp",
+    "gp-add",
+]
 
 
 @click.command()
@@ -20,9 +33,24 @@ NONLINEAR_SEMS = ["mlp", "mim", "gp", "gp-add"]
 @click.option('-m', '--methods', required=True, type=click.Choice([
     'notears', 'notears-np'
 ]), multiple=True)
+@click.option('--group', required=True, type=str)
 def cli(
-    s0, n, run_count, d, graph_type, sem_type, methods
+    s0, n, run_count, d, graph_type, sem_type, methods, group
 ):
+    
+
+    config = {
+        "s0": s0, 
+        "n": n, 
+        "run_count": run_count, 
+        "d": d, 
+        "graph_type": graph_type, 
+        "sem_type": sem_type, 
+        "methods": methods,
+    }
+
+    
+
     Xs, Xs_normalised, Xs_inverted = np.ndarray((0, n, d)), np.ndarray((0, n, d)), np.ndarray((0, n, d))
 
     methods = list(set(methods))
@@ -39,24 +67,79 @@ def cli(
             X = utils.simulate_nonlinear_sem(W_true, n, sem_type)
         
         Xs = np.append(Xs, [X], axis=0)
-        Xs_normalised = np.append(Xs_normalised, [X / X.std(axis=0) + X.mean(axis=0)])
+        Xs_normalised = np.append(Xs_normalised, [X / X.std(axis=0) + X.mean(axis=0)], axis=0)
         # TODO: set inverted
 
 
-        for m in methods:
-            # TODO: learn DAGs
-            # TODO: log perf to w&b
+    for m in methods:
+        for i in range(run_count):
+            X = Xs[i]
+            X_normalised = Xs_normalised[i]
+            # TODO: inverted
+
             if m == 'notears':
-                pass
+                wandb.init(project='structure-learning', config=config, group=group)
+                wandb.log({'model': m})
+
+                B_est, B_est_normalised = _run_notears(X, X_normalised)
+                log_performance(B_true, B_est, B_est_normalised)
+
+                wandb.finish()
+
             if m == 'notears-np':
-                pass
+                wandb.init(project='structure-learning', config=config, group=group)
+                wandb.log({'model': m})
+
+                B_est, B_est_normalised = _run_notearsnp(X, X_normalised, d)
+
+                log_performance(B_true, B_est, B_est_normalised)
+
+                wandb.finish()
 
 
-        
 
 
 
 
+
+def log_performance(B_true, B_est, B_est_normalised):
+    perf, perf_normalised = eval(B_true, B_est), eval(B_true, B_est_normalised, exp_type='normalised')
+
+    wandb.log({**perf, **perf_normalised})
+    wandb.log({'B_est': B_est})
+    wandb.log({'B_est_normalised': B_est_normalised})
+
+
+def eval(B, B_est, exp_type=None):
+    perf = utils.count_accuracy(B, B_est)
+    exp_type = '' if exp_type is None else f"_{exp_type}"
+    return {f"{k}{exp_type}": v for k, v in perf.items()}
+
+
+def _run_notearsnp(X, X_normalised, d):
+    model = NotearsMLP(dims=[d, 10, 1], bias=True)#.double()
+    model_normalised = NotearsMLP(dims=[d, 10, 1], bias=True)#.double()
+
+    W_est = nonlinear.notears_nonlinear(model, X, lambda1=0.01, lambda2=0.01)
+    W_est_normalised = nonlinear.notears_nonlinear(model_normalised, X_normalised, lambda1=0.01, lambda2=0.01)
+
+    B_est, B_est_normalised = W_est, W_est_normalised
+    B_est[B_est != 0] = 1 # assumes W_est is already thresholded for 0.
+    B_est_normalised[B_est_normalised != 0] = 1 # assumes W_est is already thresholded for 0.
+
+    return B_est, B_est_normalised
+
+def _run_notears(X, X_normalised):
+    W_est = linear.notears_linear(X, lambda1=0.1, loss_type='l2')
+    W_est_normalised = linear.notears_linear(X_normalised, lambda1=0.1, loss_type='l2')
+    
+    B_est, B_est_normalised = W_est, W_est_normalised
+    B_est[B_est != 0] = 1 # assumes W_est is already thresholded for 0.
+    B_est_normalised[B_est_normalised != 0] = 1 # assumes W_est is already thresholded for 0.
+
+    return B_est, B_est_normalised
 
 if __name__ == '__main__':
+    wandb.login()
+    torch.set_default_dtype(torch.double)
     cli()

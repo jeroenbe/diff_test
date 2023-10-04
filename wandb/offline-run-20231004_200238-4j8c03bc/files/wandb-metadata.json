@@ -1,0 +1,51 @@
+{
+    "os": "Darwin-22.6.0-x86_64-i386-64bit",
+    "python": "3.7.9",
+    "heartbeatAt": "2023-10-04T18:02:38.923503",
+    "startedAt": "2023-10-04T18:02:38.869359",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "-m",
+        "notears",
+        "-m",
+        "notears-np",
+        "--group",
+        "test01"
+    ],
+    "state": "running",
+    "program": "-m run",
+    "codePathLocal": null,
+    "git": {
+        "remote": "git@github.com:jeroenbe/diff_test.git",
+        "commit": "8cfcdc38659336f4e4a2f7932ee08cb23242d024"
+    },
+    "email": "jeroen.berrevoets@gmail.com",
+    "root": "/Users/jeroenberrevoets/Documents/PhD/research/self/discovery/diff_test/code/diff_test",
+    "host": "Jeroens-MacBook-Pro.local",
+    "username": "jeroenberrevoets",
+    "executable": "/Users/jeroenberrevoets/.virtualenvs/diff-learn/bin/python",
+    "cpu_count": 6,
+    "cpu_count_logical": 12,
+    "cpu_freq": {
+        "current": 2600,
+        "min": 2600,
+        "max": 2600
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2600,
+            "min": 2600,
+            "max": 2600
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 465.62699127197266,
+            "used": 8.858928680419922
+        }
+    },
+    "memory": {
+        "total": 16.0
+    }
+}
