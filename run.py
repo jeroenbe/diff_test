@@ -71,7 +71,7 @@ def cli(
             W_true = utils.simulate_parameter(B_true)
             X = utils.simulate_linear_sem(W_true, n, sem_type)
         else:
-            X = utils.simulate_nonlinear_sem(W_true, n, sem_type)
+            X = utils.simulate_nonlinear_sem(B_true, n, sem_type)
         
         Xs = np.append(Xs, [X], axis=0)
         Xs_normalised = np.append(Xs_normalised, [X / X.std(axis=0) + X.mean(axis=0)], axis=0)
