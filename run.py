@@ -4,8 +4,15 @@ import click, wandb
 import torch
 
 from notears import utils, linear, nonlinear
-
 from notears.nonlinear import NotearsMLP
+
+from dagma.src.models.linear_dagma import DagmaLinear
+from dagma.src.models.nonlinear_dagma import DagmaNonlinear, DagmaMLP
+from dagma.src.utils import convert_pc_to_adjacency
+from causallearn.search.ScoreBased.GES import ges
+from causallearn.score.LocalScoreFunction import local_score_cv_general
+
+    
 
 LINEAR_SEMS = [
     "gauss",
@@ -31,7 +38,7 @@ NONLINEAR_SEMS = [
 @click.option('-g', '--graph-type', required=True, type=click.Choice(['ER', 'SF', 'BP'], case_sensitive=False), default='ER')
 @click.option('-sem', '--sem-type', required=True, type=click.Choice([*LINEAR_SEMS, *NONLINEAR_SEMS], case_sensitive=False), default='gauss')
 @click.option('-m', '--methods', required=True, type=click.Choice([
-    'notears', 'notears-np'
+    'notears', 'notears-np', 'dagma-np', 'dagma', 'ges'
 ]), multiple=True)
 @click.option('--group', required=True, type=str)
 def cli(
@@ -95,7 +102,36 @@ def cli(
                 log_performance(B_true, B_est, B_est_normalised)
 
                 wandb.finish()
+                
+            if m == 'dagma-np':
+                wandb.init(project='structure-learning', config=config, group=group)
+                wandb.log({'model': m})
+                
+                B_est, B_est_normalised = _run_dagmanp(X, X_normalised, d)
+                
+                log_performance(B_true, B_est, B_est_normalised)
+                
+                wandb.finish()
 
+            if m == "dagma":
+                wandb.init(project='structure-learning', config=config, group=group)
+                wandb.log({'model': m})
+                
+                B_est, B_est_normalised = _run_dagma(X, X_normalised)
+                
+                log_performance(B_true, B_est, B_est_normalised)
+                
+                wandb.finish()
+                
+            if m == "ges":
+                wandb.init(project='structure-learning', config=config, group=group)
+                wandb.log({'model': m})
+                
+                B_est, B_est_normalised = _run_ges(X, X_normalised)
+                
+                log_performance(B_true, B_est, B_est_normalised)
+                
+                wandb.finish()
 
 
 
@@ -137,6 +173,47 @@ def _run_notears(X, X_normalised):
     B_est[B_est != 0] = 1 # assumes W_est is already thresholded for 0.
     B_est_normalised[B_est_normalised != 0] = 1 # assumes W_est is already thresholded for 0.
 
+    return B_est, B_est_normalised
+
+def _run_dagmanp(X, X_normalised, d):
+    eq_model = DagmaMLP(dims=[d, 10, 1], bias=True)#.double()
+    eq_model_normalised = DagmaMLP(dims=[d, 10, 1], bias=True)#.double()
+    
+    model = DagmaNonlinear(eq_model, dtype=torch.double, verbose = True)
+    model_normalised = DagmaNonlinear(eq_model_normalised, dtype=torch.double, verbose = True)
+    
+    W_est = model.fit(X, lambda1=0.02, lambda2=0.005)
+    W_est_normalised = model_normalised.fit(X_normalised, lambda1=0.02, lambda2=0.005)
+
+    B_est, B_est_normalised = W_est, W_est_normalised
+    B_est[B_est != 0] = 1 # assumes W_est is already thresholded for 0.
+    B_est_normalised[B_est_normalised != 0] = 1 # assumes W_est is already thresholded for 0.
+
+    return B_est, B_est_normalised
+
+def _run_dagma(X, X_normalised):
+    
+    model = DagmaLinear(loss_type='l2') # create a linear model with least squares loss
+    model_normalised = DagmaLinear(loss_type='l2') # create a linear model with least squares loss
+    
+    W_est = model.fit(X, lambda1=0.02) # fit the model with L1 reg. (coeff. 0.02)
+    W_est_normalised = model_normalised.fit(X_normalised, lambda1=0.1)
+    
+    B_est, B_est_normalised = W_est, W_est_normalised
+    B_est[B_est != 0] = 1 # assumes W_est is already thresholded for 0.
+    B_est_normalised[B_est_normalised != 0] = 1 # assumes W_est is already thresholded for 0.
+
+    return B_est, B_est_normalised
+
+def _run_ges(X, X_normalised):
+    Record = ges(X)
+    graph_ges = (Record["G"].graph)
+    B_est = convert_pc_to_adjacency(graph_ges)
+    
+    Record_normalized = ges(X_normalised)
+    graph_ges_normalized = (Record_normalized["G"].graph)
+    B_est_normalised = convert_pc_to_adjacency(graph_ges_normalized)
+    
     return B_est, B_est_normalised
 
 if __name__ == '__main__':
