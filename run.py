@@ -145,6 +145,10 @@ def log_performance(B_true, B_est, B_est_normalised):
     wandb.log({'B_est': B_est})
     wandb.log({'B_est_normalised': B_est_normalised})
 
+    perf_diff = eval(B_est, B_est_normalised)
+
+    wandb.log({'DAG-diff': perf_diff['shd']})
+
 
 def eval(B, B_est, exp_type=None):
     perf = utils.count_accuracy(B, B_est)
