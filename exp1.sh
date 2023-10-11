@@ -10,9 +10,9 @@ python -m run --run-count 5 -d 20 -n 1000 --sem-type gauss \
 
 
  python -m run --run-count 5 -d 20 -n 1000 --sem-type mlp\
- -m dagma
+ -m dagma\
  --group exp1
 
  python -m run --run-count 5 -d 30 -n 1000 --sem-type mlp\
- -m dagma
+ -m dagma\
  --group exp1
