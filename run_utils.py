@@ -12,12 +12,12 @@ from dagma.src.utils import convert_pc_to_adjacency
 from causallearn.search.ScoreBased.GES import ges
 from causallearn.score.LocalScoreFunction import local_score_cv_general
 
-def log_performance(B_true, B_est, B_est_normalised):
+def log_performance(B_true, B_est, B_est_normalised, counter_naming: str="normalised"):
     perf, perf_normalised = eval(B_true, B_est), eval(B_true, B_est_normalised, exp_type='normalised')
 
     wandb.log({**perf, **perf_normalised})
     wandb.log({'B_est': B_est})
-    wandb.log({'B_est_normalised': B_est_normalised})
+    wandb.log({f'B_est_{counter_naming}': B_est_normalised})
 
     perf_diff = eval(B_est, B_est_normalised)
 

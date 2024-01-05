@@ -86,7 +86,7 @@ def cli(
                 wandb.log({'model': m})
 
                 B_est, B_est_varsorted = _run_notears(X, X_varsorted)
-                log_performance(B_true, B_est, B_est_varsorted)
+                log_performance(B_true, B_est, B_est_varsorted, counter_naming="varsorted")
 
                 wandb.finish()
 
@@ -96,7 +96,7 @@ def cli(
 
                 B_est, B_est_varsorted = _run_notearsnp(X, X_varsorted, d)
 
-                log_performance(B_true, B_est, B_est_varsorted)
+                log_performance(B_true, B_est, B_est_varsorted, counter_naming="varsorted")
 
                 wandb.finish()
                 
@@ -106,7 +106,7 @@ def cli(
                 
                 B_est, B_est_varsorted = _run_dagmanp(X, X_varsorted, d)
                 
-                log_performance(B_true, B_est, B_est_varsorted)
+                log_performance(B_true, B_est, B_est_varsorted, counter_naming="varsorted")
                 
                 wandb.finish()
 
@@ -116,7 +116,7 @@ def cli(
                 
                 B_est, B_est_varsorted = _run_dagma(X, X_varsorted)
                 
-                log_performance(B_true, B_est, B_est_varsorted)
+                log_performance(B_true, B_est, B_est_varsorted, counter_naming="varsorted")
                 
                 wandb.finish()
                 
@@ -126,7 +126,7 @@ def cli(
                 
                 B_est, B_est_varsorted = _run_ges(X, X_varsorted)
                 
-                log_performance(B_true, B_est, B_est_varsorted)
+                log_performance(B_true, B_est, B_est_varsorted, counter_naming="varsorted")
                 
                 wandb.finish()
 
