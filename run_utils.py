@@ -12,12 +12,36 @@ from dagma.src.utils import convert_pc_to_adjacency
 from causallearn.search.ScoreBased.GES import ges
 from causallearn.score.LocalScoreFunction import local_score_cv_general
 
+
+# From Reisach et al. (2022)
+def varsortability(X, W, tol=1e-9):
+    """ Takes n x d data and a d x d adjaceny matrix,
+    where the i,j-th entry corresponds to the edge weight for i->j,
+    and returns a value indicating how well the variance order
+    reflects the causal order. """
+    E = W != 0
+    Ek = E.copy()
+    var = np.var(X, axis=0, keepdims=True)
+
+    n_paths = 0
+    n_correctly_ordered_paths = 0
+
+    for _ in range(E.shape[0] - 1):
+        n_paths += Ek.sum()
+        n_correctly_ordered_paths += (Ek * var / var.T > 1 + tol).sum()
+        n_correctly_ordered_paths += 1/2*(
+            (Ek * var / var.T <= 1 + tol) *
+            (Ek * var / var.T >  1 - tol)).sum()
+        Ek = Ek.dot(E)
+
+    return n_correctly_ordered_paths / n_paths
+
 def log_performance(B_true, B_est, B_est_normalised, exp_type: str="normalised"):
     perf, perf_normalised = eval(B_true, B_est), eval(B_true, B_est_normalised, exp_type=exp_type)
 
     wandb.log({**perf, **perf_normalised})
     wandb.log({'B_est': B_est})
-    wandb.log({f'B_est_{counter_naming}': B_est_normalised})
+    wandb.log({f'B_est_{exp_type}': B_est_normalised})
 
     perf_diff = eval(B_est, B_est_normalised)
 

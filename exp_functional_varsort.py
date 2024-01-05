@@ -7,7 +7,7 @@ import igraph as ig
 
 from notears import utils
 
-from run_utils import _run_dagma, _run_dagmanp, _run_ges, _run_notears, _run_notearsnp, log_performance
+from run_utils import _run_dagma, _run_dagmanp, _run_ges, _run_notears, _run_notearsnp, log_performance, varsortability
 
 
 
@@ -74,9 +74,10 @@ def cli(
     X_varsorted = var_sort_functions[var_sort](X_norm, d, sorting)
 
 
+    config["original_varsort"] = varsortability(X, W)
+    config["normalised_varsort"] = varsortability(X_norm, W)
+    config["controlled_varsort"] = varsortability(X_varsorted, W)
 
-    print("original", X.std(axis=0))
-    print("lin-var-sort", X_varsorted.std(axis=0))
 
 
     for m in methods:
