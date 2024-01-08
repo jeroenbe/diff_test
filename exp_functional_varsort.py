@@ -40,27 +40,6 @@ def cli(
         "methods": methods,
     }
 
-
-
-    methods = list(set(methods))
-
-    # Let's simulate (and keep) the DAG
-    B_true = utils.simulate_dag(d, s0, graph_type)
-
-    # Simulate a default Gaussian linear dataset
-    W = utils.simulate_parameter(B_true)
-    X = utils.simulate_linear_sem(B_true, n, "gauss")
-
-
-    # Figure out the topological ordering
-    g = ig.Graph.Adjacency(B_true, loops=False)
-    g.vs["label"] = list(range(d))
-
-    sorting = g.topological_sorting()
-
-    # Normalise the data
-    X_norm = (X - X.mean(axis=0)) / X.std(axis=0)
-
     var_sort_functions = {
         "exp": var_sort_exp,
         "lin": var_sort_lin,
@@ -71,23 +50,59 @@ def cli(
         "log-inv": var_sort_log_inv,
     }
 
-    X_varsorted = var_sort_functions[var_sort](X_norm, d, sorting)
+    Xs, Xs_varsorted, Xs_normalised = np.ndarray((0, n, d)), np.ndarray((0, n, d)), np.ndarray((0, n, d))
+    Ws = np.ndarray((0, d, d))
+
+    methods = list(set(methods))
+
+    # Let's simulate (and keep) the DAG
+    B_true = utils.simulate_dag(d, s0, graph_type)
 
 
-    config["original_varsort"] = varsortability(X, W)
-    config["normalised_varsort"] = varsortability(X_norm, W)
-    config["controlled_varsort"] = varsortability(X_varsorted, W)
+
+    for _ in range(run_count):
+
+        # Simulate a default Gaussian linear dataset
+        W = utils.simulate_parameter(B_true)
+        X = utils.simulate_linear_sem(B_true, n, "gauss")
+
+
+        # Figure out the topological ordering
+        g = ig.Graph.Adjacency(B_true, loops=False)
+        g.vs["label"] = list(range(d))
+
+        sorting = g.topological_sorting()
+
+        # Normalise the data
+        X_norm = (X - X.mean(axis=0)) / X.std(axis=0)
+
+        # Control varsortability
+        X_varsorted = var_sort_functions[var_sort](X_norm, d, sorting)
+
+        Xs = np.append(Xs, [X], axis=0)
+        Xs_varsorted = np.append(Xs_varsorted, [X_varsorted], axis=0)
+        Xs_normalised = np.append(Xs_normalised, [X_norm], axis=0)
+        Ws = np.append(Ws, [W], axis=0)
+
+
+    
 
 
 
     for m in methods:
         for i in range(run_count):
+            X = Xs[i]
+            X_varsorted = Xs_varsorted[i]
+            X_normalised = Xs_normalised[i]
+            W = Ws[i]
+
             if m == 'notears':
                 wandb.init(project='structure-learning', config=config, group=group)
                 wandb.log({'model': m})
 
                 B_est, B_est_varsorted = _run_notears(X, X_varsorted)
                 log_performance(B_true, B_est, B_est_varsorted, exp_type="varsorted")
+                log_varsortability(W, X, X_normalised, X_varsorted)
 
                 wandb.finish()
 
@@ -98,6 +113,7 @@ def cli(
                 B_est, B_est_varsorted = _run_notearsnp(X, X_varsorted, d)
 
                 log_performance(B_true, B_est, B_est_varsorted, exp_type="varsorted")
+                log_varsortability(W, X, X_normalised, X_varsorted)
 
                 wandb.finish()
                 
@@ -108,6 +124,7 @@ def cli(
                 B_est, B_est_varsorted = _run_dagmanp(X, X_varsorted, d)
                 
                 log_performance(B_true, B_est, B_est_varsorted, exp_type="varsorted")
+                log_varsortability(W, X, X_normalised, X_varsorted)
                 
                 wandb.finish()
 
@@ -118,6 +135,7 @@ def cli(
                 B_est, B_est_varsorted = _run_dagma(X, X_varsorted)
                 
                 log_performance(B_true, B_est, B_est_varsorted, exp_type="varsorted")
+                log_varsortability(W, X, X_normalised, X_varsorted)
                 
                 wandb.finish()
                 
@@ -128,9 +146,19 @@ def cli(
                 B_est, B_est_varsorted = _run_ges(X, X_varsorted)
                 
                 log_performance(B_true, B_est, B_est_varsorted, exp_type="varsorted")
+                log_varsortability(W, X, X_normalised, X_varsorted)
                 
                 wandb.finish()
 
+            
+
+
+def log_varsortability(W, X, X_norm, X_varsorted):
+    wandb.log({
+                "original_varsort" : varsortability(X, W),
+                "normalised_varsort" : varsortability(X_norm, W),
+                "controlled_varsort" : varsortability(X_varsorted, W),
+            })
 
 def var_sort_lin(X_norm, d, sorting):
     X_varsorted = X_norm.copy()
