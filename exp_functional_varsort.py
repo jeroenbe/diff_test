@@ -5,7 +5,10 @@ import torch
 
 import igraph as ig
 
+from sklearn.preprocessing import minmax_scale
+
 from notears import utils
+
 
 from run_utils import _run_dagma, _run_dagmanp, _run_ges, _run_notears, _run_notearsnp, log_performance, varsortability
 
@@ -200,7 +203,7 @@ def var_sort_log(X_norm, d, sorting):
 
     vars = np.logspace(1, d, d, base=0.5)
     vars = np.full(vars.shape, vars.max()) - vars
-    vars /= (vars[-1] / (d+1))
+    vars = minmax_scale(vars, feature_range=(1, d))
 
     X_varsorted[:, sorting] *= vars
     return X_varsorted
@@ -210,7 +213,7 @@ def var_sort_log_inv(X_norm, d, sorting):
 
     vars = np.logspace(1, d, d, base=0.5)
     vars = np.full(vars.shape, vars.max()) - vars
-    vars /= (vars[-1] / (d+1))
+    vars = minmax_scale(vars, feature_range=(1, d))
     vars = vars[::-1]
 
     X_varsorted[:, sorting] *= vars
