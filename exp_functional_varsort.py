@@ -12,7 +12,11 @@ from notears import utils
 
 from run_utils import _run_dagma, _run_dagmanp, _run_ges, _run_notears, _run_notearsnp, log_performance, varsortability
 
-
+from CausalDisco.analytics import (
+    var_sortability,
+    r2_sortability,
+    snr_sortability
+)
 
 
 @click.command()
@@ -158,9 +162,13 @@ def cli(
 
 def log_varsortability(W, X, X_norm, X_varsorted):
     wandb.log({
-                "original_varsort" : varsortability(X, W),
-                "normalised_varsort" : varsortability(X_norm, W),
-                "controlled_varsort" : varsortability(X_varsorted, W),
+                "original_varsort" : var_sortability(X, W),
+                "normalised_varsort" : var_sortability(X_norm, W),
+                "controlled_varsort" : var_sortability(X_varsorted, W),
+
+                "original_r2_sort" : r2_sortability(X, W),
+                "normalised_r2_sort" : r2_sortability(X_norm, W),
+                "controlled_r2_sort" : r2_sortability(X_varsorted, W),
             })
 
 def var_sort_lin(X_norm, d, sorting):
